@@ -66,10 +66,11 @@ public abstract class BaseRVFragment<T> extends Fragment implements OnLoadMoreLi
     }
 
     protected void initAdapter(Class<? extends RecyclerArrayAdapter<T>> clazz, boolean refreshable, boolean loadmoreable) {
-        if(mView!=null)return;
-        mRecyclerView = (EasyRecyclerView)mView.findViewById(R.id.recyclerview);
-        mAdapter = (RecyclerArrayAdapter) createInstance(clazz);
-        initAdapter(refreshable, loadmoreable);
+        if(mView!=null){
+            mRecyclerView = (EasyRecyclerView)mView.findViewById(R.id.recyclerview);
+            mAdapter = (RecyclerArrayAdapter) createInstance(clazz);
+            initAdapter(refreshable, loadmoreable);
+        }
     }
 
     public Object createInstance(Class<?> cls) {
