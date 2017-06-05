@@ -1,0 +1,312 @@
+package com.youmobi.mmstore.view;
+
+import java.io.InputStream;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import android.content.Context;
+import android.content.res.AssetManager;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.PopupWindow;
+import android.widget.TextView;
+
+import com.youmobi.mmstore.bean.address.CityModel;
+import com.youmobi.mmstore.bean.address.DistrictModel;
+import com.youmobi.mmstore.bean.address.ProvinceModel;
+import com.youmobi.mmstore.bean.address.XmlParserHandler;
+import com.zhuanbei.pinhuihui.R;
+import com.youmobi.mmstore.widget.OnWheelChangedListener;
+import com.youmobi.mmstore.widget.WheelView;
+import com.youmobi.mmstore.widget.adapters.ArrayWheelAdapter;
+
+public class CityPopupwindow extends PopupWindow implements OnWheelChangedListener {
+
+	private Context context;
+	private TextView tv;
+
+	/**
+	 * 所有省
+	 */
+	protected ProvinceModel[] mProvinceDatas;
+	/**
+	 * key - 省 value - 市
+	 */
+	protected Map<String, CityModel[]> mCitisDatasMap = new HashMap<String, CityModel[]>();
+	/**
+	 * key - 市 values - 区
+	 */
+	protected Map<String, DistrictModel[]> mDistrictDatasMap = new HashMap<String, DistrictModel[]>();
+
+	/**
+	 * key - 区 values - 邮编
+	 */
+	protected Map<String, String> mZipcodeDatasMap = new HashMap<String, String>();
+
+	/**
+	 * 当前省的名称
+	 */
+	protected String mCurrentProviceName;
+	/**
+	 * 当前市的名称
+	 */
+	protected String mCurrentCityName;
+	/**
+	 * 当前区的名称
+	 */
+	protected String mCurrentDistrictName = "";
+	/**
+	 * 当地理code
+	 */
+	protected String mCurrentCode = "";
+
+	/**
+	 * 当前区的邮政编码
+	 */
+	protected String mCurrentZipCode = "";
+
+	/**
+	 * 解析省市区的XML数据
+	 */
+	private WheelView mViewProvince;
+	private WheelView mViewCity;
+	private WheelView mViewDistrict;
+	private View contentView;
+
+	public CityPopupwindow(Context context) {
+		// TODO Auto-generated constructor stub
+		this.context = context;
+		contentView = LayoutInflater.from(context).inflate(
+				R.layout.view_city_pop, null);
+		setContentView(contentView);
+		setUpViews();
+		setUpListener();
+		setUpData();
+	}
+
+	public CityPopupwindow(View contentView, int width, int height,
+			boolean focusable, Context context) {
+		super(contentView, width, height, focusable);
+		this.context = context;
+		this.contentView = contentView;
+		setContentView(contentView);
+		setTouchable(true);
+		setBackgroundDrawable(context.getResources().getDrawable(
+				R.drawable.comment_background));
+		setUpViews();
+		setUpListener();
+		setUpData();
+	}
+
+	private void setUpViews() {
+		mViewProvince = (WheelView) contentView.findViewById(R.id.id_province);
+		mViewCity = (WheelView) contentView.findViewById(R.id.id_city);
+		mViewDistrict = (WheelView) contentView.findViewById(R.id.id_district);
+
+	}
+
+	private void setUpListener() {
+		// 添加change事件
+		mViewProvince.addChangingListener(this);
+		// 添加change事件
+		mViewCity.addChangingListener(this);
+		// 添加change事件
+		mViewDistrict.addChangingListener(this);
+		// 添加onclick事件
+
+	}
+
+	private void setUpData() {
+		initProvinceDatas();
+		mViewProvince.setViewAdapter(new ArrayWheelAdapter<>(context,
+				mProvinceDatas));
+		// 设置可见条目数量
+		mViewProvince.setVisibleItems(7);
+		mViewCity.setVisibleItems(7);
+		mViewDistrict.setVisibleItems(7);
+		updateCities();
+		updateAreas();
+	}
+
+	/**
+	 * 根据当前的省，更新市WheelView的信息
+	 */
+	private void updateCities() {
+		int pCurrent = mViewProvince.getCurrentItem();
+		mCurrentProviceName = mProvinceDatas[pCurrent].getName();
+		CityModel[] cities = mCitisDatasMap.get(mCurrentProviceName);
+		if (cities == null) {
+			cities = new CityModel[] {  };
+		}
+		mViewCity
+				.setViewAdapter(new ArrayWheelAdapter<CityModel>(context, cities));
+		mViewCity.setCurrentItem(0);
+		updateAreas();
+	}
+
+	/**
+	 * 根据当前的市，更新区WheelView的信息
+	 */
+	private void updateAreas() {
+		int pCurrent = mViewCity.getCurrentItem();
+		mCurrentCityName = mCitisDatasMap.get(mCurrentProviceName)[pCurrent].getName();
+		DistrictModel[] areas = mDistrictDatasMap.get(mCurrentCityName);
+
+		if (areas == null) {
+			areas = new DistrictModel[] {  };
+		}
+		mViewDistrict.setViewAdapter(new ArrayWheelAdapter<DistrictModel>(context,
+				areas));
+		mViewDistrict.setCurrentItem(0);
+
+		mCurrentDistrictName = "";
+		if(mDistrictDatasMap.get(mCurrentCityName).length!=0)
+		mCurrentDistrictName = mDistrictDatasMap.get(mCurrentCityName)[0].getName();
+	}
+
+	protected void initProvinceDatas() {
+		List<ProvinceModel> provinceList = null;
+		AssetManager asset = context.getAssets();
+		try {
+			InputStream input = asset.open("province_data.xml");
+			// 创建一个解析xml的工厂对象
+			SAXParserFactory spf = SAXParserFactory.newInstance();
+			// 解析xml
+			SAXParser parser = spf.newSAXParser();
+			XmlParserHandler handler = new XmlParserHandler();
+			parser.parse(input, handler);
+			input.close();
+			// 获取解析出来的数据
+			provinceList = handler.getDataList();
+			// */ 初始化默认选中的省、市、区
+			if (provinceList != null && !provinceList.isEmpty()) {
+				mCurrentProviceName = provinceList.get(0).getName();
+				List<CityModel> cityList = provinceList.get(0).getCityList();
+				if (cityList != null && !cityList.isEmpty()) {
+					mCurrentCityName = cityList.get(0).getName();
+					List<DistrictModel> districtList = cityList.get(0)
+							.getDistrictList();
+					mCurrentDistrictName = districtList.get(0).getName();
+					mCurrentZipCode = districtList.get(0).getZipcode();
+				}
+			}
+			// */
+			mProvinceDatas = new ProvinceModel[provinceList.size()];
+			for (int i = 0; i < provinceList.size(); i++) {
+				// 遍历所有省的数据
+				mProvinceDatas[i] = provinceList.get(i);
+				List<CityModel> cityList = provinceList.get(i).getCityList();
+				CityModel[] cityNames = new CityModel[cityList.size()];
+				for (int j = 0; j < cityList.size(); j++) {
+					// 遍历省下面的所有市的数据
+					cityNames[j] = cityList.get(j);
+					List<DistrictModel> districtList = cityList.get(j)
+							.getDistrictList();
+					DistrictModel[] distrinctNameArray = new DistrictModel[districtList
+							.size()];
+					DistrictModel[] distrinctArray = new DistrictModel[districtList
+							.size()];
+					for (int k = 0; k < districtList.size(); k++) {
+						// 遍历市下面所有区/县的数据
+						DistrictModel districtModel = new DistrictModel(districtList.get(k).getId(),
+								districtList.get(k).getName(), districtList
+										.get(k).getZipcode());
+						// 区/县对于的邮编，保存到mZipcodeDatasMap
+						mZipcodeDatasMap.put(districtList.get(k).getName(),
+								districtList.get(k).getZipcode());
+						distrinctArray[k] = districtModel;
+						distrinctNameArray[k] = districtModel;
+					}
+					// 市-区/县的数据，保存到mDistrictDatasMap
+					mDistrictDatasMap.put(cityNames[j].getName(), distrinctNameArray);
+				}
+				// 省-市的数据，保存到mCitisDatasMap
+				mCitisDatasMap.put(provinceList.get(i).getName(), cityNames);
+			}
+		} catch (Throwable e) {
+			e.printStackTrace();
+		} finally {
+
+		}
+	}
+
+	@Override
+	public void onChanged(WheelView wheel, int oldValue, int newValue) {
+		// TODO Auto-generated method stub
+		if (wheel == mViewProvince) {
+			updateCities();
+		} else if (wheel == mViewCity) {
+			updateAreas();
+
+		} else if (wheel == mViewDistrict) {
+			mCurrentDistrictName = mDistrictDatasMap.get(mCurrentCityName)[newValue].getName();
+			mCurrentZipCode = mZipcodeDatasMap.get(mCurrentDistrictName);
+		}
+
+		setText();
+	}
+
+	public void setValue(String pid,String cid,String aid) {
+		ProvinceModel provinceModel = null;
+		CityModel cityModel  = null;
+		DistrictModel districtModel = null;
+		if(!TextUtils.isEmpty(pid))
+		for(ProvinceModel p: mProvinceDatas){
+			if(p.getId().equals(pid)){
+				mCurrentProviceName = p.getName();
+				provinceModel = p;
+				break;
+			}
+		}
+
+		if(provinceModel!=null){
+			for(CityModel p: mCitisDatasMap.get(mCurrentProviceName)){
+				if(p.getId().equals(pid)){
+					mCurrentCityName = p.getName();
+					cityModel = p;
+					break;
+				}
+			}
+		}
+
+		if(cityModel!=null){
+			for(DistrictModel p: mDistrictDatasMap.get(mCurrentCityName)){
+				if(p.getId().equals(pid)){
+					mCurrentDistrictName = p.getName();
+					districtModel = p;
+					break;
+				}
+			}
+		}
+
+		setText();
+
+	}
+
+	public void setText() {
+		tv.setText(mCurrentProviceName + " " + mCurrentCityName + " "
+				+ mCurrentDistrictName);
+
+	 	int pProvinceCurrent = mViewProvince.getCurrentItem();
+	 	int pCityCurrent = mViewCity.getCurrentItem();
+	 	int pDistrictCurrent = mViewDistrict.getCurrentItem();
+
+		ProvinceModel provinceModel = mProvinceDatas[pProvinceCurrent];
+		CityModel cityModel = mCitisDatasMap.get(provinceModel.getName())[pCityCurrent];
+		DistrictModel districtModel = null;
+		if (mDistrictDatasMap.get(mCurrentCityName).length>0)
+			districtModel = mDistrictDatasMap.get(mCurrentCityName)[pDistrictCurrent];
+
+		mCurrentCode = provinceModel.getId() +","+cityModel.getId()+","+(districtModel==null?"000000":districtModel.getId());
+		tv.setTag(mCurrentCode);
+	}
+
+	public void setTextView(TextView tv) {
+		this.tv = tv;
+	}
+}

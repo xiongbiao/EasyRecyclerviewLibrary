@@ -1,0 +1,62 @@
+package com.youmobi.mmstore.view;
+
+import android.content.Context;
+import android.graphics.drawable.ColorDrawable;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.AdapterView;
+import android.widget.ListView;
+import android.widget.PopupWindow;
+
+import com.zhuanbei.pinhuihui.R;
+import com.youmobi.mmstore.adapter.CommonAdapter;
+import com.youmobi.mmstore.adapter.ViewHolder;
+
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by 360 on 2016/10/26.
+ */
+public class CountryWindow extends PopupWindow {
+
+    private OnCountryItemClick onCountryItemClick;
+    public CountryWindow(Context context, String[] mCountry){
+        View v= LayoutInflater.from(context).inflate(R.layout.dialog_country,null);
+        ListView lv= (ListView) v.findViewById(R.id.lv);
+        List<String> mDate=new ArrayList<>();
+        for (int i=0;i<mCountry.length;i++){
+            mDate.add(mCountry[i]);
+        }
+        CommonAdapter<String> adapter=new CommonAdapter<String>(context,mDate,R.layout.item_country) {
+            @Override
+            public void convert(ViewHolder helper, String item, int position) {
+                helper.setText(R.id.tv,item);
+            }
+        };
+        lv.setAdapter(adapter);
+        lv.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                if(onCountryItemClick!=null){
+                    onCountryItemClick.onItemClick(position);
+                }
+            }
+        });
+        setContentView(v);
+        setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+        setWidth(context.getResources().getDimensionPixelSize(R.dimen.d130dp));
+        setOutsideTouchable(true);
+        setFocusable(true);
+        setBackgroundDrawable(new ColorDrawable());
+    }
+
+    public interface OnCountryItemClick{
+        void onItemClick(int position);
+    }
+
+    public void setOnCountryItemClick(OnCountryItemClick onCountryItemClick) {
+        this.onCountryItemClick = onCountryItemClick;
+    }
+}

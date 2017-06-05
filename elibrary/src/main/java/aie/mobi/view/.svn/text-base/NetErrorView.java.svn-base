@@ -1,0 +1,74 @@
+package com.youmobi.mmstore.view;
+
+import android.content.Context;
+import android.util.AttributeSet;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
+
+import com.zhuanbei.pinhuihui.R;
+
+/**
+ * Created by 360 on 2017/3/14.
+ */
+
+public class NetErrorView extends FrameLayout implements View.OnClickListener {
+    public OnReloadClickListener onReloadClickListener;
+    public ProgressBar progressbar;
+    public LinearLayout llNotNet;
+    public final static int STATUS_LOAD=1;
+    public final static int STATUS_NET_ERROR=2;
+    public int status=STATUS_LOAD;
+    public NetErrorView(Context context) {
+        this(context,null);
+    }
+
+    public NetErrorView(Context context, AttributeSet attrs) {
+        this(context,attrs,0);
+    }
+
+    public NetErrorView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context);
+    }
+    public void init(Context context){
+        View view= LayoutInflater.from(context).inflate(R.layout.view_net_error,null);
+        view.findViewById(R.id.tv_reload).setOnClickListener(this);
+        progressbar= (ProgressBar) view.findViewById(R.id.progressbar);
+        llNotNet= (LinearLayout) view.findViewById(R.id.ll_not_net);
+        setStatus(status);
+        ViewGroup.LayoutParams lp=new ViewGroup.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        addView(view,lp);
+    }
+
+    public void setOnReloadClickListener(OnReloadClickListener onReloadClickListener) {
+        this.onReloadClickListener = onReloadClickListener;
+    }
+
+    @Override
+    public void onClick(View v) {
+        switch (v.getId()){
+            case R.id.tv_reload:
+                if(onReloadClickListener!=null){
+                    onReloadClickListener.onReload();
+                }
+                break;
+        }
+    }
+    public interface OnReloadClickListener{
+        void onReload();
+    }
+    public void setStatus(int status){
+        if(status==STATUS_LOAD){
+            llNotNet.setVisibility(GONE);
+            progressbar.setVisibility(VISIBLE);
+        }else if(status==STATUS_NET_ERROR){
+            llNotNet.setVisibility(VISIBLE);
+            progressbar.setVisibility(GONE);
+        }
+
+    }
+}

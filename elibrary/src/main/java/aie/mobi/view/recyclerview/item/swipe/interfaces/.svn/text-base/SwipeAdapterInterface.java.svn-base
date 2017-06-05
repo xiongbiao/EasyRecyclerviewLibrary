@@ -1,0 +1,9 @@
+package com.youmobi.mmstore.view.recyclerview.item.swipe.interfaces;
+
+public interface SwipeAdapterInterface {
+
+    int getSwipeLayoutResourceId(int position);
+
+    void notifyDatasetChanged();
+
+}

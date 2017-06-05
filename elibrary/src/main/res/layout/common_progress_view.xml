@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+ <aie.mobi.view.loadding.LoadingView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:loadingView="http://schemas.android.com/apk/res-auto"
+    android:layout_width="@dimen/d56dp"
+    android:layout_height="@dimen/d56dp"
+    android:layout_gravity="center"
+    loadingView:loadding_color="@color/common_divider_wide"
+    loadingView:progress_style="material" />
+<!--<ProgressBar xmlns:android="http://schemas.android.com/apk/res/android"-->
+    <!--android:id="@+id/progressbar"-->
+    <!--style="@style/progerss_style"-->
+    <!--android:layout_width="@dimen/d56dp"-->
+    <!--android:layout_height="@dimen/d56dp"-->
+    <!--android:layout_gravity="center" />-->

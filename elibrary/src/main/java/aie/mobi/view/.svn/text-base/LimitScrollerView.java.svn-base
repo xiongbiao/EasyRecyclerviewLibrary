@@ -1,0 +1,219 @@
+package com.youmobi.mmstore.view;
+
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.content.Context;
+import android.content.res.TypedArray;
+import android.os.Handler;
+import android.os.Message;
+import android.util.AttributeSet;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.LinearLayout;
+
+import com.youmobi.mmstore.utils.LogUtils;
+import com.zhuanbei.pinhuihui.R;
+
+/**
+ * Created by 360 on 2017/5/24.
+ */
+
+public class LimitScrollerView extends LinearLayout {
+    public LinearLayout llContent1;
+    public LinearLayout llContent2;
+    public int limit;
+    public int durationTime;
+    public int periodTime;
+    public int scrollHeight;
+    private final int MSG_SETDATA = 1;
+    private final int MSG_SCROL = 2;
+    public int index;
+    public LinearLayout llNow;
+    public LinearLayout llDown;
+    public boolean first = true;
+    public OnItemClickListener onItemClickListener;
+    public Handler handler = new Handler() {
+        @Override
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            switch (msg.what) {
+                case MSG_SETDATA:
+                    boundData();
+                    break;
+                case MSG_SCROL:
+                    startAnimation();
+                    break;
+            }
+        }
+    };
+
+    public void setOnItemClickListener(LimitScrollerView.OnItemClickListener onItemClickListener) {
+        this.onItemClickListener = onItemClickListener;
+    }
+
+    public LimitScrollerView(Context context) {
+        this(context, null);
+    }
+
+    public LimitScrollerView(Context context, AttributeSet attrs) {
+        this(context, attrs, 0);
+    }
+
+    public LimitScrollerView(Context context, AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context, attrs);
+    }
+
+    public void init(Context context, AttributeSet attrs) {
+        LayoutInflater.from(context).inflate(R.layout.item_x, this, true);
+        llContent1 = (LinearLayout) findViewById(R.id.ll_content1);
+        llContent2 = (LinearLayout) findViewById(R.id.ll_content2);
+        llNow = llContent1;
+        llDown = llContent2;
+        if (attrs != null) {
+            TypedArray ta = context.obtainStyledAttributes(attrs, R.styleable.LimitScroller);
+            limit = ta.getInt(R.styleable.LimitScroller_limit, 1);
+            durationTime = ta.getInt(R.styleable.LimitScroller_durationTime, 1000);
+            periodTime = ta.getInt(R.styleable.LimitScroller_periodTime, 1000);
+            ta.recycle();
+        }
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        setMeasuredDimension(getMeasuredWidth(), getMeasuredHeight() / 2);
+        scrollHeight = getMeasuredHeight();
+    }
+
+    public void setAdapter(LimitScrllAdapter adapter) {
+        this.adapter = adapter;
+        if(adapter.getCount()>0){
+            boundData();
+        }
+    }
+
+    /**
+     * 数据适配器
+     */
+    public interface LimitScrllAdapter {
+        public int getCount();
+
+        public View getView(int index);
+    }
+
+    private LimitScrllAdapter adapter;
+
+    public void boundData() {
+        if (adapter != null) {
+            if (first) {
+                View v = adapter.getView(index);
+                if(v!=null){
+
+
+                v.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if(onItemClickListener!=null){
+                            onItemClickListener.onItemClick(index);
+                        }
+                    }
+                });
+                llNow.addView(v);
+                int x = index + 1;
+                if (x >= adapter.getCount()) {
+                    x = 0;
+                }
+                View v2 = adapter.getView(x);
+                final int finalX = x;
+                v2.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if(onItemClickListener!=null){
+                            onItemClickListener.onItemClick(finalX);
+                        }
+                    }
+                });
+                llDown.addView(v2);
+                first = false;
+                }
+            } else {
+                llDown.removeAllViews();
+                int ind = index + 1;
+                if (ind >= adapter.getCount()) {
+                    ind = 0;
+                }
+                View v2 = adapter.getView(ind);
+                if(v2!=null){
+                final int finalX = ind;
+                v2.setOnClickListener(new OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+                        if(onItemClickListener!=null){
+                            onItemClickListener.onItemClick(finalX);
+                        }
+                    }
+                });
+                llDown.addView(v2);
+                }
+            }
+
+        }
+    }
+
+    public void startAnimation() {
+        if (scrollHeight > 0) {
+            ObjectAnimator animator1 = ObjectAnimator.ofFloat(llNow, "translationY", llNow.getTranslationY(), llNow.getTranslationY() - scrollHeight);
+            ObjectAnimator animator2 = ObjectAnimator.ofFloat(llDown, "translationY", llDown.getTranslationY(), llDown.getTranslationY() - scrollHeight);
+            Log.d("tag", "=" + (llContent2.getTranslationY() - scrollHeight) + "scrollHeight=" + scrollHeight + ",llContent2.getTranslationY()=" + llContent2.getTranslationY());
+            AnimatorSet set = new AnimatorSet();
+            set.setDuration(periodTime);
+            set.playTogether(animator1, animator2);
+            set.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    index++;
+                    if (adapter != null) {
+                        if (index >= adapter.getCount()) {
+                            index = 0;
+                        }
+                    }
+                    LinearLayout temp = llNow;
+                    llNow = llDown;
+                    llDown = temp;
+                    llDown.setTranslationY(llDown.getTranslationY()+scrollHeight*2);
+                    LogUtils.d("tag","after llDown.getTranslationY="+llDown.getTranslationY()+"llNow.getTranslationY="+llNow.getTranslationY());
+                    handler.sendEmptyMessage(MSG_SETDATA);
+                    handler.sendEmptyMessageDelayed(MSG_SCROL, durationTime);
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            });
+            set.start();
+        } else {
+            handler.sendEmptyMessageDelayed(MSG_SCROL, durationTime);
+        }
+    }
+
+    public void stopScroll() {
+        handler.removeCallbacksAndMessages(null);
+    }
+    public interface OnItemClickListener{
+        void onItemClick(int position);
+    }
+}

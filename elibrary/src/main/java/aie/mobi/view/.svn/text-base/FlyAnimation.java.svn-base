@@ -1,0 +1,104 @@
+package com.youmobi.mmstore.view;
+
+import android.animation.Animator;
+import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.app.Activity;
+import android.text.TextPaint;
+import android.util.TypedValue;
+import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
+import android.widget.FrameLayout;
+import android.widget.TextView;
+
+import com.youmobi.mmstore.utils.LogUtils;
+
+/**
+ * Created by 360 on 2017/3/24.
+ */
+
+public class FlyAnimation {
+    public TextView mView;
+    public int startLocation[]=new int[2];
+    public int endLocation[]=new int[2];
+    public ViewGroup root;
+    public int animationDuration=800;
+    public boolean isRun;
+    public float scale;
+    public int endWidth;
+    public OnAnimationCompleteListener onAnimationCompleteListener;
+    public FlyAnimation(Activity activity,TextView view){
+        root= (ViewGroup) activity.getWindow().getDecorView();
+        this.mView=new TextView(activity);
+        mView.setText("+¥"+view.getText());
+        mView.setTextColor(view.getCurrentTextColor());
+        mView.setTextSize(TypedValue.COMPLEX_UNIT_PX,view.getTextSize());
+        TextPaint tp=mView.getPaint();
+        tp.setFakeBoldText(true);
+    }
+    public void setAnimation(TextView startView,TextView endView){
+        startView.getLocationOnScreen(startLocation);
+        endView.getLocationOnScreen(endLocation);
+        FrameLayout.LayoutParams lp=new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT,FrameLayout.LayoutParams.WRAP_CONTENT);
+        lp.leftMargin=startLocation[0];
+        lp.topMargin=startLocation[1];
+        mView.setLayoutParams(lp);
+        scale=endView.getTextSize()/startView.getTextSize();
+        root.addView(mView);
+        endWidth=endView.getWidth();
+    }
+    public void startAnimation(){
+        if(!isRun) {
+            float endX = endLocation[0] - startLocation[0]-endWidth;
+            float endY = endLocation[1] - startLocation[1];
+            LogUtils.d("FlyAnimation","endx="+endX+"endy="+endY+",scale="+scale);
+            LogUtils.d("FlyAnimation","endx="+endX+"endy="+endY+",scale="+scale);
+            ObjectAnimator animatorX = ObjectAnimator.ofFloat(mView, "translationX", mView.getTranslationX(), endX);
+            ObjectAnimator animatorY = ObjectAnimator.ofFloat(mView, "translationY", mView.getTranslationY(), endY);
+            ObjectAnimator scaleY=ObjectAnimator.ofFloat(mView,"scaleY",1f,scale);
+            ObjectAnimator scaleX=ObjectAnimator.ofFloat(mView,"scaleX",1f,scale);
+            AnimatorSet set = new AnimatorSet();
+            set.setDuration(animationDuration);
+            set.setInterpolator(new AccelerateDecelerateInterpolator());
+            set.playTogether(animatorX, animatorY,scaleX,scaleY);
+            set.addListener(new Animator.AnimatorListener() {
+                @Override
+                public void onAnimationStart(Animator animation) {
+                    isRun = true;
+                }
+
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    isRun = false;
+                    root.removeView(mView);
+                    if(onAnimationCompleteListener!=null){
+                        onAnimationCompleteListener.onComplete();
+                    }
+                }
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+
+                }
+
+                @Override
+                public void onAnimationRepeat(Animator animation) {
+
+                }
+            });
+            set.start();
+        }
+    }
+
+    public void setAnimationDuration(int animationDuration) {
+        this.animationDuration = animationDuration;
+    }
+
+    public void setOnAnimationCompleteListener(OnAnimationCompleteListener onAnimationCompleteListener) {
+        this.onAnimationCompleteListener = onAnimationCompleteListener;
+    }
+
+    public interface OnAnimationCompleteListener{
+        void onComplete();
+    }
+}
