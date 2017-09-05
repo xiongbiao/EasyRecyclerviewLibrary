@@ -2,7 +2,8 @@
     package="mobi.aie.elibrary">
 
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <application android:allowBackup="true" android:label="@string/app_name"
+    <application
+        android:allowBackup="true"
         android:supportsRtl="true">
 
     </application>
